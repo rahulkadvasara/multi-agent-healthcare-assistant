@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Healthcare Assistant - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>🏥 Healthcare Assistant</h2>
+                <div class="user-info">
+                    Welcome, <span id="username">User</span>
+                </div>
+            </div>
+
+            <ul class="nav-tabs">
+                <li class="nav-tab">
+                    <button id="chatTab" class="active" onclick="switchTab('chat')">
+                        💬 AI Assistant
+                    </button>
+                </li>
+                <li class="nav-tab">
+                    <button id="remindersTab" onclick="switchTab('reminders')">
+                        ⏰ Reminders
+                    </button>
+                </li>
+            </ul>
+
+            <div class="logout-btn">
+                <button class="btn btn-secondary w-100" onclick="logout()">
+                    🚪 Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="content-area">
+                <!-- Chat Tab -->
+                <div id="chatContent" class="tab-content active">
+                    <div class="chat-container">
+                        <div class="chat-messages" id="chatMessages">
+                            <div class="message assistant">
+                                <div class="message-avatar">🤖</div>
+                                <div class="message-content">
+                                    <p>Hello! I'm your AI healthcare assistant. I can help you with:</p>
+                                    <ul>
+                                        <li>📋 <strong>Medical Report Analysis</strong> - Upload JPG/PNG reports for analysis</li>
+                                        <li>🩺 <strong>Symptom Checking</strong> - Describe your symptoms for possible conditions</li>
+                                        <li>💊 <strong>Drug Interactions</strong> - Check for medication conflicts</li>
+                                        <li>❓ <strong>General Health Questions</strong> - Ask me anything about health and wellness</li>
+                                    </ul>
+                                    <p><em>Remember: This is for informational purposes only. Always consult healthcare professionals for medical advice.</em></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="chat-input-area">
+                            <!-- File Upload Area -->
+                            <div class="file-upload-area" id="fileUploadArea">
+                                <p>📁 Drop medical report images here or click to upload</p>
+                                <input type="file" id="fileInput" accept="image/*" style="display: none;">
+                            </div>
+
+                            <!-- Chat Input -->
+                            <div class="input-group">
+                                <textarea 
+                                    id="chatInput" 
+                                    class="chat-input" 
+                                    placeholder="Type your message... (e.g., 'I have a headache and fever' or 'Analyze my blood test')"
+                                    rows="1"
+                                ></textarea>
+                                <button id="sendBtn" class="send-btn">
+                                    ➤
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reminders Tab -->
+                <div id="remindersContent" class="tab-content">
+                    <div class="reminders-container">
+                        <h3 class="mb-4">💊 Medication Reminders</h3>
+
+                        <!-- Add Reminder Form -->
+                        <div class="add-reminder-form">
+                            <h5 class="mb-3">Add New Reminder</h5>
+                            <form id="reminderForm">
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="medicineName">Medicine Name</label>
+                                        <input type="text" id="medicineName" class="form-control" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="dosage">Dosage</label>
+                                        <input type="text" id="dosage" class="form-control" placeholder="e.g., 1 tablet" required>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="frequency">Frequency</label>
+                                        <select id="frequency" class="form-control" required>
+                                            <option value="">Select frequency</option>
+                                            <option value="Once daily">Once daily</option>
+                                            <option value="Twice daily">Twice daily</option>
+                                            <option value="Three times daily">Three times daily</option>
+                                            <option value="Four times daily">Four times daily</option>
+                                            <option value="As needed">As needed</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="reminderTime">Time</label>
+                                        <input type="time" id="reminderTime" class="form-control" required>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Add Reminder</button>
+                            </form>
+                        </div>
+
+                        <!-- Reminders List -->
+                        <div class="reminders-list">
+                            <div id="remindersList">
+                                <div class="text-center p-4 text-muted">
+                                    No reminders yet. Add your first medication reminder above.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
