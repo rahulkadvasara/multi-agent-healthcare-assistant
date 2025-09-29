@@ -139,7 +139,67 @@ If this is indeed a medical report, please try uploading a clearer image or cont
 # Reminder endpoints
 @app.post("/add-reminder")
 async def add_reminder(reminder: ReminderCreate):
-    """Add a new medication reminder"""
+    """Add a new medication reminder with drug interaction checking"""
+    try:
+        from agents.drug_interaction import drug_interaction_checker
+        from utils.drug_interaction_tool import check_all_drug_interactions
+        
+        # Get user's current medications
+        current_reminders = db.get_user_reminders(reminder.user_id)
+        current_medications = [r['medicine_name'].lower() for r in current_reminders]
+        
+        print(f"DEBUG: Manual reminder - checking interactions for {reminder.medicine_name}")
+        print(f"DEBUG: Current medications: {current_medications}")
+        
+        # Check for drug interactions if user has existing medications
+        if len(current_medications) > 0:
+            try:
+                interaction_result = check_all_drug_interactions(
+                    [reminder.medicine_name.lower()], 
+                    current_medications
+                )
+                
+                print(f"DEBUG: Interaction result: {interaction_result[:200]}...")
+                
+                # If interactions are detected, don't add to database
+                if "⚠️ Interactions Detected" in interaction_result:
+                    return {
+                        "success": False,
+                        "interaction_warning": True,
+                        "message": "Drug interaction detected",
+                        "interaction_details": interaction_result,
+                        "conflicting_drugs": current_medications,
+                        "new_drug": reminder.medicine_name
+                    }
+                    
+            except Exception as e:
+                print(f"DEBUG: Error in interaction checking: {e}")
+                # Continue with adding the reminder if interaction check fails
+        
+        # No interactions found or no current medications - proceed with adding
+        success = db.add_reminder(
+            user_id=reminder.user_id,
+            medicine_name=reminder.medicine_name,
+            dosage=reminder.dosage,
+            frequency=reminder.frequency,
+            time=reminder.time
+        )
+        
+        if success:
+            return {
+                "success": True,
+                "message": "Reminder added successfully",
+                "interaction_warning": False
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to add reminder")
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/force-add-reminder")
+async def force_add_reminder(reminder: ReminderCreate):
+    """Force add a medication reminder bypassing interaction warnings"""
     try:
         success = db.add_reminder(
             user_id=reminder.user_id,
@@ -150,7 +210,11 @@ async def add_reminder(reminder: ReminderCreate):
         )
         
         if success:
-            return {"message": "Reminder added successfully"}
+            return {
+                "success": True,
+                "message": "Reminder added successfully (interaction warning bypassed)",
+                "forced": True
+            }
         else:
             raise HTTPException(status_code=500, detail="Failed to add reminder")
             

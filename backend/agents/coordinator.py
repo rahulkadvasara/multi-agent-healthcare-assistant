@@ -41,10 +41,14 @@ class CoordinatorAgent:
         ]):
             return self._handle_symptom_check(message)
         
-        # Check for drug interaction request
+        # Check for drug interaction request OR reminder request
         elif any(keyword in message_lower for keyword in [
             'drug', 'medication', 'medicine', 'pill', 'interaction', 
-            'taking', 'prescribed', 'pharmacy', 'side effect', 'can i take'
+            'taking', 'prescribed', 'pharmacy', 'side effect', 'can i take',
+            # Reminder keywords
+            'add', 'remind', 'reminder', 'create reminder', 'set reminder',
+            'delete', 'remove', 'cancel', 'stop', 'edit', 'change', 'update',
+            'show my reminders', 'list my reminders', 'my reminders'
         ]):
             return self._handle_drug_interaction(message, user_id)
         

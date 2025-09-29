@@ -4,6 +4,8 @@ let currentUser = null;
 
 // Initialize dashboard
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Dashboard initializing...');
+    
     // Check authentication
     const userData = localStorage.getItem('user');
     if (!userData) {
@@ -19,6 +21,19 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Load reminders
     loadReminders();
+    
+    console.log('Dashboard initialized successfully');
+});
+
+// Debug: Catch any unexpected page refreshes
+window.addEventListener('beforeunload', function(e) {
+    console.log('Page is about to unload/refresh - this might be the issue!');
+    console.trace('Page unload stack trace');
+});
+
+// Debug: Catch any navigation
+window.addEventListener('popstate', function(e) {
+    console.log('Navigation detected:', e);
 });
 
 function initializeEventListeners() {
@@ -96,16 +111,65 @@ async function sendMessage() {
         
         const data = await response.json();
         
-        // Remove loading message
-        document.getElementById(loadingId).remove();
+        // Remove loading message safely
+        const loadingElement = document.getElementById(loadingId);
+        if (loadingElement) {
+            loadingElement.remove();
+            console.log('Chat loading removed successfully');
+        } else {
+            console.warn('Chat loading element not found:', loadingId);
+        }
         
         if (response.ok) {
-            addMessageToChat('assistant', data.response);
+            console.log('Chat response received:', data.response.substring(0, 100) + '...');
+            const messageId = addMessageToChat('assistant', data.response);
+            
+            // Check if this is a reminder-related response
+            if (data.response.includes('Medication Reminder Added') || 
+                data.response.includes('Reminder Deleted') || 
+                data.response.includes('Reminder Updated')) {
+                console.log('Reminder operation detected in chat - NOT refreshing page');
+                
+                // Highlight the response message to make it more visible
+                const messageElement = document.getElementById(messageId);
+                if (messageElement) {
+                    messageElement.style.border = '2px solid #28a745';
+                    messageElement.style.backgroundColor = '#f8fff9';
+                    
+                    // Remove highlight after 5 seconds
+                    setTimeout(() => {
+                        messageElement.style.border = '';
+                        messageElement.style.backgroundColor = '';
+                    }, 5000);
+                }
+                
+                // Show notification that reminders tab has new data
+                if (document.getElementById('remindersTab')) {
+                    const remindersTab = document.getElementById('remindersTab');
+                    remindersTab.style.background = '#e3f2fd';
+                    remindersTab.innerHTML = '⏰ Reminders <span style="color: #007bff;">●</span>';
+                    
+                    setTimeout(() => {
+                        remindersTab.style.background = '';
+                        remindersTab.innerHTML = '⏰ Reminders';
+                    }, 5000);
+                }
+                
+                // Add a persistent success indicator
+                showAlert('✅ Reminder operation completed! Check the Reminders tab for updates.', 'success', true);
+            }
         } else {
             addMessageToChat('assistant', 'Sorry, I encountered an error processing your request. Please try again.');
         }
     } catch (error) {
-        document.getElementById(loadingId).remove();
+        // Remove loading message safely
+        const loadingElement = document.getElementById(loadingId);
+        if (loadingElement) {
+            loadingElement.remove();
+            console.log('Chat loading removed after error');
+        } else {
+            console.warn('Chat loading element not found after error:', loadingId);
+        }
         addMessageToChat('assistant', 'Connection error. Please check if the server is running.');
         console.error('Chat error:', error);
     }
@@ -121,15 +185,51 @@ function addMessageToChat(sender, content) {
     
     const avatar = sender === 'user' ? currentUser.username.charAt(0).toUpperCase() : '🤖';
     
+    // Convert markdown to HTML for assistant messages
+    const processedContent = sender === 'assistant' ? convertMarkdownToHTML(content) : content;
+    
     messageDiv.innerHTML = `
         <div class="message-avatar">${avatar}</div>
-        <div class="message-content">${content}</div>
+        <div class="message-content">${processedContent}</div>
     `;
     
     chatMessages.appendChild(messageDiv);
     chatMessages.scrollTop = chatMessages.scrollHeight;
     
     return messageId;
+}
+
+function convertMarkdownToHTML(text) {
+    // Skip conversion if it's already HTML (contains loading spinner)
+    if (text.includes('<div class="loading">')) {
+        return text;
+    }
+    
+    return text
+        // Headers
+        .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+        .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+        .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+        
+        // Bold text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        
+        // Code blocks
+        .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+        
+        // Inline code
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        
+        // Unordered lists
+        .replace(/^\- (.*$)/gm, '<li>$1</li>')
+        .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+        
+        // Line breaks
+        .replace(/\n\n/g, '<br><br>')
+        .replace(/\n/g, '<br>')
+        
+        // Horizontal rules
+        .replace(/^---$/gm, '<hr>');
 }
 
 // File upload handling
@@ -180,8 +280,14 @@ async function handleFileUpload(file) {
         
         const data = await response.json();
         
-        // Remove loading message
-        document.getElementById(loadingId).remove();
+        // Remove loading message safely
+        const loadingElement = document.getElementById(loadingId);
+        if (loadingElement) {
+            loadingElement.remove();
+            console.log('Upload loading removed successfully');
+        } else {
+            console.warn('Upload loading element not found:', loadingId);
+        }
         
         if (response.ok) {
             addMessageToChat('assistant', data.analysis);
@@ -189,7 +295,14 @@ async function handleFileUpload(file) {
             addMessageToChat('assistant', data.detail || 'Error analyzing the report. Please try again.');
         }
     } catch (error) {
-        document.getElementById(loadingId).remove();
+        // Remove loading message safely
+        const loadingElement = document.getElementById(loadingId);
+        if (loadingElement) {
+            loadingElement.remove();
+            console.log('Upload loading removed after error');
+        } else {
+            console.warn('Upload loading element not found after error:', loadingId);
+        }
         addMessageToChat('assistant', 'Error uploading file. Please try again.');
         console.error('Upload error:', error);
     }
@@ -225,14 +338,24 @@ async function addReminder(e) {
         const data = await response.json();
         
         if (response.ok) {
-            // Clear form
-            document.getElementById('reminderForm').reset();
-            
-            // Reload reminders
-            loadReminders();
-            
-            // Show success message
-            showAlert('Reminder added successfully!', 'success');
+            if (data.success) {
+                // Clear form
+                document.getElementById('reminderForm').reset();
+                
+                // Reload reminders
+                loadReminders();
+                
+                // Show success message
+                showAlert('✅ Reminder added successfully!', 'success');
+            } else if (data.interaction_warning) {
+                // Show interaction warning with options
+                showInteractionWarning(data, {
+                    medicine_name: medicineName,
+                    dosage: dosage,
+                    frequency: frequency,
+                    time: time
+                });
+            }
         } else {
             showAlert(data.detail || 'Error adding reminder', 'danger');
         }
@@ -240,6 +363,120 @@ async function addReminder(e) {
         showAlert('Connection error. Please try again.', 'danger');
         console.error('Add reminder error:', error);
     }
+}
+
+function showInteractionWarning(interactionData, reminderData) {
+    // Create interaction warning modal/alert
+    const warningDiv = document.createElement('div');
+    warningDiv.className = 'interaction-warning-modal';
+    warningDiv.innerHTML = `
+        <div class="interaction-warning-content">
+            <div class="interaction-warning-header">
+                <h4>⚠️ Drug Interaction Warning</h4>
+            </div>
+            <div class="interaction-warning-body">
+                <p><strong>New Medication:</strong> ${reminderData.medicine_name}</p>
+                <p><strong>Dosage:</strong> ${reminderData.dosage}</p>
+                <p><strong>Frequency:</strong> ${reminderData.frequency}</p>
+                <p><strong>Time:</strong> ${reminderData.time}</p>
+                
+                <div class="interaction-details">
+                    <h5>🚨 Interaction Alert:</h5>
+                    <div class="interaction-text">${formatInteractionText(interactionData.interaction_details)}</div>
+                </div>
+                
+                <div class="conflicting-drugs">
+                    <h5>💊 Current Medications:</h5>
+                    <ul>
+                        ${interactionData.conflicting_drugs.map(drug => `<li>${drug.charAt(0).toUpperCase() + drug.slice(1)}</li>`).join('')}
+                    </ul>
+                </div>
+                
+                <p class="safety-note">
+                    <strong>⚠️ This medication may interact with your current medications.</strong>
+                </p>
+                
+                <div class="interaction-options">
+                    <h5>Your Options:</h5>
+                    <button class="btn btn-danger" onclick="forceAddReminder(${JSON.stringify(reminderData).replace(/"/g, '&quot;')})">
+                        ⚠️ Add Anyway (Not Recommended)
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeInteractionWarning()">
+                        🚫 Cancel
+                    </button>
+                    <button class="btn btn-info" onclick="consultDoctor()">
+                        👨‍⚕️ Consult Doctor First
+                    </button>
+                </div>
+                
+                <p class="disclaimer">
+                    <em>Your safety is important. Please consult a healthcare professional before proceeding.</em>
+                </p>
+            </div>
+        </div>
+        <div class="interaction-warning-backdrop" onclick="closeInteractionWarning()"></div>
+    `;
+    
+    document.body.appendChild(warningDiv);
+}
+
+function formatInteractionText(interactionDetails) {
+    // Convert the interaction details to HTML format
+    return interactionDetails
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>')
+        .replace(/• /g, '<br>• ');
+}
+
+async function forceAddReminder(reminderData) {
+    try {
+        const response = await fetch(`${API_BASE}/force-add-reminder`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                user_id: currentUser.id,
+                medicine_name: reminderData.medicine_name,
+                dosage: reminderData.dosage,
+                frequency: reminderData.frequency,
+                time: reminderData.time
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            // Clear form
+            document.getElementById('reminderForm').reset();
+            
+            // Reload reminders
+            loadReminders();
+            
+            // Close warning modal
+            closeInteractionWarning();
+            
+            // Show success message with warning
+            showAlert('⚠️ Reminder added despite interaction warning. Please monitor for side effects and consult your healthcare provider.', 'warning', true);
+        } else {
+            showAlert(data.detail || 'Error adding reminder', 'danger');
+        }
+    } catch (error) {
+        showAlert('Connection error. Please try again.', 'danger');
+        console.error('Force add reminder error:', error);
+    }
+}
+
+function closeInteractionWarning() {
+    const warningModal = document.querySelector('.interaction-warning-modal');
+    if (warningModal) {
+        warningModal.remove();
+    }
+}
+
+function consultDoctor() {
+    closeInteractionWarning();
+    showAlert('💡 Good choice! Please consult your doctor or pharmacist about this medication combination before adding the reminder.', 'info', true);
 }
 
 async function loadReminders() {
@@ -320,20 +557,26 @@ async function deleteReminder(reminderId) {
 }
 
 // Utility functions
-function showAlert(message, type) {
+function showAlert(message, type, persistent = false) {
     // Create alert element
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type}`;
-    alertDiv.textContent = message;
+    alertDiv.className = `alert alert-${type} alert-dismissible`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+    `;
     
     // Insert at top of current tab content
     const activeContent = document.querySelector('.tab-content.active');
     activeContent.insertBefore(alertDiv, activeContent.firstChild);
     
-    // Remove after 3 seconds
+    // Remove after specified time (longer for persistent alerts)
+    const timeout = persistent ? 8000 : 3000;
     setTimeout(() => {
-        alertDiv.remove();
-    }, 3000);
+        if (alertDiv.parentElement) {
+            alertDiv.remove();
+        }
+    }, timeout);
 }
 
 function logout() {

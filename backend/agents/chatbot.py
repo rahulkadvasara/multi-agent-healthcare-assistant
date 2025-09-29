@@ -70,21 +70,51 @@ class HealthcareChatbot:
         
         emoji = topic_emojis.get(topic, '💡')
         
-        formatted_response = f"""
-## {emoji} Healthcare Information
+        # Provide comprehensive response - truncate at sentence boundary for readability
+        comprehensive_response = self._truncate_at_sentence(ai_response, 700)
+        
+        formatted_response = f"""{emoji} **Health Information**
 
-{ai_response}
+{comprehensive_response}
 
----
-
-**Additional Resources:**
-{self._get_topic_resources(topic)}
-
-**⚠️ Important Reminder:**
-This information is for educational purposes only and should not replace professional medical advice. Always consult with qualified healthcare providers for personalized medical guidance.
-"""
+💡 **Note:** This is educational information. Consult healthcare professionals for personalized medical advice."""
         
         return formatted_response
+    
+    def _truncate_at_sentence(self, text: str, max_length: int) -> str:
+        """Truncate text at sentence boundary to avoid mid-sentence cuts"""
+        if len(text) <= max_length:
+            return text
+        
+        # Find the last sentence ending before max_length
+        truncated = text[:max_length]
+        
+        # Look for sentence endings (., !, ?)
+        last_period = truncated.rfind('.')
+        last_exclamation = truncated.rfind('!')
+        last_question = truncated.rfind('?')
+        
+        # Find the latest sentence ending
+        last_sentence_end = max(last_period, last_exclamation, last_question)
+        
+        if last_sentence_end > 0:
+            # Include the punctuation mark
+            return text[:last_sentence_end + 1]
+        else:
+            # If no sentence ending found, look for other natural breaks
+            last_colon = truncated.rfind(':')
+            last_semicolon = truncated.rfind(';')
+            
+            natural_break = max(last_colon, last_semicolon)
+            if natural_break > 0:
+                return text[:natural_break + 1]
+            
+            # As last resort, find last complete word
+            last_space = truncated.rfind(' ')
+            if last_space > 0:
+                return text[:last_space] + "..."
+            
+            return text[:max_length] + "..."
     
     def _get_topic_resources(self, topic: str) -> str:
         """Get additional resources based on topic"""
@@ -134,107 +164,36 @@ This information is for educational purposes only and should not replace profess
         """Provide fallback response when AI is unavailable"""
         
         topic_responses = {
-            'nutrition': """
-## 🥗 Nutrition & Diet Information
+            'nutrition': """🥗 **Nutrition Information**
 
-I'd be happy to help with nutrition questions! Here are some general guidelines:
+A balanced diet includes a variety of colorful fruits and vegetables, whole grains like brown rice and quinoa, and lean proteins such as fish, poultry, beans, and nuts. Limit processed foods high in sodium, sugar, and unhealthy fats. Stay hydrated with water throughout the day. Consider portion control and eating regular meals to maintain stable energy levels. Include healthy fats from sources like avocados, olive oil, and fatty fish for optimal nutrition.
 
-**Healthy Eating Basics:**
-- Eat a variety of fruits and vegetables
-- Choose whole grains over refined grains
-- Include lean proteins in your diet
-- Limit processed foods and added sugars
-- Stay hydrated with plenty of water
+💡 **Note:** Individual nutritional needs vary. Consult a registered dietitian for personalized guidance.""",
+            'exercise': """💪 **Exercise Guidelines**
 
-**For Personalized Advice:**
-- Consult with a registered dietitian
-- Discuss dietary changes with your healthcare provider
-- Consider your individual health conditions and needs
-""",
-            'exercise': """
-## 💪 Exercise & Fitness Information
+Adults should aim for at least 150 minutes of moderate-intensity aerobic activity weekly, plus muscle-strengthening activities twice per week. Start slowly if you're new to exercise and gradually increase intensity and duration. Include both cardiovascular exercises like walking or swimming and strength training with weights or resistance bands. Listen to your body, stay hydrated, and allow rest days for recovery. Regular physical activity improves cardiovascular health, strengthens bones, and enhances mental well-being.
 
-Regular physical activity is important for overall health:
+💡 **Note:** Consult your doctor before starting new exercise programs, especially if you have health conditions.""",
+            'mental_health': """🧠 **Mental Wellness**
 
-**Exercise Guidelines:**
-- Aim for at least 150 minutes of moderate activity per week
-- Include both cardio and strength training
-- Start slowly if you're new to exercise
-- Find activities you enjoy to stay motivated
+Mental health is as important as physical health. Practice stress management through deep breathing exercises, meditation, or mindfulness techniques. Maintain 7-9 hours of quality sleep nightly and establish consistent sleep routines. Stay socially connected with family and friends, and engage in activities you enjoy. Regular exercise, balanced nutrition, and limiting alcohol can significantly impact mood and mental clarity. Don't hesitate to seek professional help when needed.
 
-**Safety First:**
-- Consult your doctor before starting new exercise programs
-- Warm up before and cool down after exercise
-- Listen to your body and rest when needed
-- Stay hydrated during physical activity
-""",
-            'mental_health': """
-## 🧠 Mental Health & Wellness
+💡 **Note:** If you're experiencing persistent mental health concerns, reach out to a mental health professional.""",
+            'prevention': """🛡️ **Preventive Health**
 
-Mental health is just as important as physical health:
+Prevention is the foundation of good health. Follow age-appropriate screening guidelines for conditions like cancer, diabetes, and heart disease. Stay current with vaccinations including annual flu shots and recommended boosters. Schedule regular checkups with your healthcare provider even when feeling well. Maintain a healthy lifestyle by not smoking, limiting alcohol consumption, eating nutritiously, exercising regularly, and managing stress effectively. Early detection and prevention are key to long-term health.
 
-**Stress Management:**
-- Practice relaxation techniques like deep breathing
-- Get adequate sleep (7-9 hours for most adults)
-- Maintain social connections
-- Engage in activities you enjoy
+💡 **Note:** Discuss your individual risk factors and screening schedule with your healthcare provider.""",
+            'chronic_conditions': """🏥 **Chronic Condition Management**
 
-**When to Seek Help:**
-- If you're feeling overwhelmed or unable to cope
-- If symptoms interfere with daily activities
-- If you have thoughts of self-harm
-- Don't hesitate to reach out to mental health professionals
-""",
-            'prevention': """
-## 🛡️ Preventive Healthcare
+Successfully managing chronic conditions requires a comprehensive approach. Follow your prescribed treatment plan consistently and take medications exactly as directed by your healthcare provider. Monitor your condition regularly using recommended tools like blood pressure cuffs or glucose meters. Maintain healthy lifestyle habits including proper nutrition, regular exercise as approved by your doctor, adequate sleep, and stress management. Keep all medical appointments and communicate openly with your healthcare team about any concerns or changes in your condition.
 
-Prevention is key to maintaining good health:
+💡 **Note:** Work closely with your healthcare team to develop a personalized management plan.""",
+            'general': """💡 **Healthcare Information**
 
-**Regular Screenings:**
-- Follow age-appropriate screening guidelines
-- Keep up with recommended vaccinations
-- Schedule regular checkups with your healthcare provider
-- Know your family health history
+I'm here to provide general health information on topics like nutrition, exercise, mental wellness, preventive care, and chronic condition management. I can help answer questions about healthy lifestyle choices, general symptoms, and wellness strategies. However, I cannot provide specific medical diagnoses or replace professional medical advice. For personalized medical guidance, diagnostic questions, or treatment decisions, always consult with qualified healthcare professionals who can evaluate your individual situation.
 
-**Healthy Lifestyle:**
-- Don't smoke or use tobacco products
-- Limit alcohol consumption
-- Maintain a healthy weight
-- Practice safe behaviors
-""",
-            'chronic_conditions': """
-## 🏥 Chronic Condition Management
-
-Managing chronic conditions requires ongoing care:
-
-**Key Strategies:**
-- Follow your treatment plan consistently
-- Take medications as prescribed
-- Monitor your condition regularly
-- Maintain healthy lifestyle habits
-
-**Healthcare Team:**
-- Work closely with your doctors
-- Ask questions about your condition
-- Keep track of symptoms and changes
-- Don't skip appointments
-""",
-            'general': """
-## 💡 General Health Information
-
-I'm here to help with your health questions! I can provide information about:
-
-- **Nutrition & Diet**: Healthy eating tips and guidelines
-- **Exercise & Fitness**: Physical activity recommendations
-- **Mental Health**: Stress management and wellness
-- **Prevention**: Screening and preventive care
-- **Chronic Conditions**: Management strategies
-- **General Wellness**: Overall health maintenance
-
-**Remember**: This information is educational only. Always consult healthcare professionals for personalized medical advice.
-
-Feel free to ask specific questions about any health topic!
-"""
+💡 **Note:** This is educational information only. Seek professional medical advice for health concerns."""
         }
         
         return topic_responses.get(topic, topic_responses['general'])

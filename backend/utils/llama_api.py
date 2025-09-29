@@ -64,40 +64,47 @@ class LlamaAPI:
                 model=self.model,
                 messages=messages,
                 max_tokens=max_tokens,
-                temperature=0.7
+                temperature=0.7,
+                timeout=30  # 30 second timeout
             )
             
             return response.choices[0].message.content
             
         except Exception as e:
-            print(f"Error generating LLaMA response: {e}")
-            return self._fallback_response(prompt, system_message)
+            error_msg = str(e).lower()
+            if "timeout" in error_msg or "timed out" in error_msg:
+                print(f"Request timed out: {e}")
+                return self._timeout_fallback_response(prompt, system_message)
+            else:
+                print(f"Error generating LLaMA response: {e}")
+                return self._fallback_response(prompt, system_message)
     
     def analyze_medical_report(self, ocr_text: str) -> Optional[str]:
         """Analyze medical report text"""
-        system_message = """You are a medical report analyzer. Analyze the provided medical report text and provide:
-        1. Key findings and abnormalities
-        2. Important values and their significance
-        3. Recommendations for follow-up
-        4. Summary in simple terms
+        system_message = """You are a medical report analyzer. Analyze the provided medical report text and provide a comprehensive summary in simple, easy-to-understand language. Include:
+        1. Key findings and what they mean
+        2. Important values and their significance in plain terms
+        3. Any abnormalities or areas of concern
+        4. What the results suggest about health status
+        5. General recommendations
         
-        Always include a disclaimer that this is for informational purposes only and users should consult healthcare professionals."""
+        Write 5-6 sentences that explain the report in layman's terms. Be clear and informative without medical jargon."""
         
-        prompt = f"Please analyze this medical report:\n\n{ocr_text}"
+        prompt = f"Please analyze this medical report and explain it in simple terms:\n\n{ocr_text}"
         
         return self.generate_response(prompt, system_message, max_tokens=1500)
     
     def check_symptoms(self, symptoms: str) -> Optional[str]:
         """Analyze symptoms and suggest possible conditions"""
-        system_message = """You are a symptom checker assistant. Based on the symptoms provided:
-        1. List possible conditions (most likely first)
-        2. Suggest when to seek immediate medical attention
-        3. Provide general care recommendations
-        4. Include red flag symptoms to watch for
+        system_message = """You are a helpful symptom checker assistant. Provide a clear, comprehensive analysis in 4-5 complete sentences that covers:
+        1. Most likely possible conditions or causes
+        2. General care recommendations (rest, hydration, etc.)
+        3. When to seek medical attention if symptoms worsen
+        4. Any important things to monitor
         
-        Always emphasize that this is not a diagnosis and professional medical consultation is required."""
+        Write in simple, clear language that's easy to understand. Be helpful and informative."""
         
-        prompt = f"Please analyze these symptoms: {symptoms}"
+        prompt = f"Please analyze these symptoms and provide guidance: {symptoms}"
         
         return self.generate_response(prompt, system_message, max_tokens=1200)
     
@@ -113,6 +120,43 @@ class LlamaAPI:
         
         return self.generate_response(question, system_message, max_tokens=1000)
     
+    def _timeout_fallback_response(self, prompt: str, system_message: str = None) -> str:
+        """Provide fallback response when request times out"""
+        if "drug" in prompt.lower() or "medication" in prompt.lower():
+            return """The AI service is currently experiencing delays, but I can provide immediate medication safety guidance:
+
+**Medication Safety Checklist:**
+- Always inform healthcare providers about ALL medications you're taking
+- Check with your pharmacist before starting new medications
+- Don't mix medications without professional guidance
+- Keep an updated medication list with you
+- Report unusual side effects immediately
+
+**For drug interactions:** Contact your pharmacist or doctor directly for immediate assistance.
+
+**⚠️ Important:** For urgent medication questions, contact your healthcare provider or pharmacist directly."""
+
+        elif "symptom" in prompt.lower():
+            return """The AI service is currently experiencing delays. For immediate symptom guidance:
+
+**General Care:**
+- Monitor symptoms and note changes
+- Stay hydrated and rest
+- Use appropriate over-the-counter remedies for minor symptoms
+
+**Seek immediate care if you experience:**
+- High fever, difficulty breathing, severe pain
+- Signs of dehydration or persistent vomiting
+
+**⚠️ For urgent symptoms, contact your healthcare provider or call emergency services.**"""
+
+        else:
+            return """The AI service is currently experiencing delays. For immediate healthcare assistance, please contact your healthcare provider directly.
+
+**For urgent medical concerns:** Call your doctor or emergency services.
+**For medication questions:** Contact your pharmacist.
+**For general health info:** Try again in a few minutes."""
+
     def _fallback_response(self, prompt: str, system_message: str = None) -> str:
         """Provide fallback response when AI is unavailable"""
         if "symptom" in prompt.lower() or "pain" in prompt.lower() or "hurt" in prompt.lower():
@@ -163,9 +207,7 @@ class LlamaAPI:
 **General guidance:**
 - Keep copies of all medical reports for your records
 - Note any values marked as "abnormal" or "high/low"
-- Follow up as recommended by your healthcare provider
-
-**⚠️ Professional medical interpretation is essential for accurate understanding of your results.**"""
+- Follow up as recommended by your healthcare provider"""
 
         else:
             return """I'm currently unable to connect to the AI service, but I'm here to help with healthcare information.

@@ -24,25 +24,48 @@ class ReportAnalyzer:
     def _format_analysis(self, analysis: str, original_text: str) -> str:
         """Format the analysis with proper structure"""
         
-        formatted = f"""
-## 📋 Medical Report Analysis
+        # Allow longer analysis for reports (5-6 sentences) - truncate at sentence boundary
+        short_analysis = self._truncate_at_sentence(analysis, 500)
+        
+        formatted = f"""📋 **Report Analysis**
 
-**AI Analysis:**
-{analysis}
-
----
-
-**Original Extracted Text:**
-```
-{original_text[:500]}{'...' if len(original_text) > 500 else ''}
-```
-
----
-
-**⚠️ Important Disclaimer:**
-This analysis is for informational purposes only and should not replace professional medical advice. Please consult with your healthcare provider to discuss these results and their implications for your health.
-"""
+{short_analysis}"""
         return formatted
+    
+    def _truncate_at_sentence(self, text: str, max_length: int) -> str:
+        """Truncate text at sentence boundary to avoid mid-sentence cuts"""
+        if len(text) <= max_length:
+            return text
+        
+        # Find the last sentence ending before max_length
+        truncated = text[:max_length]
+        
+        # Look for sentence endings (., !, ?)
+        last_period = truncated.rfind('.')
+        last_exclamation = truncated.rfind('!')
+        last_question = truncated.rfind('?')
+        
+        # Find the latest sentence ending
+        last_sentence_end = max(last_period, last_exclamation, last_question)
+        
+        if last_sentence_end > 0:
+            # Include the punctuation mark
+            return text[:last_sentence_end + 1]
+        else:
+            # If no sentence ending found, look for other natural breaks
+            last_colon = truncated.rfind(':')
+            last_semicolon = truncated.rfind(';')
+            
+            natural_break = max(last_colon, last_semicolon)
+            if natural_break > 0:
+                return text[:natural_break + 1]
+            
+            # As last resort, find last complete word
+            last_space = truncated.rfind(' ')
+            if last_space > 0:
+                return text[:last_space] + "..."
+            
+            return text[:max_length] + "..."
     
     def _fallback_analysis(self, ocr_text: str) -> str:
         """Provide basic analysis when AI fails"""
@@ -62,26 +85,9 @@ This analysis is for informational purposes only and should not replace professi
             if found_terms:
                 findings.append(f"{category.title()}: {', '.join(found_terms)}")
         
-        return f"""
-## 📋 Medical Report Analysis
+        return f"""📋 **Report Analysis**
 
-**Extracted Text:**
-{ocr_text}
-
-**Basic Analysis:**
-{'- ' + chr(10).join(findings) if findings else 'No specific patterns detected in the text.'}
-
-**⚠️ Important:**
-I was unable to provide a detailed AI analysis at this time. Please:
-1. Ensure the image is clear and readable
-2. Consult with your healthcare provider for proper interpretation
-3. Keep the original report for your medical records
-
-**Next Steps:**
-- Share this report with your doctor
-- Ask about any values that seem concerning
-- Follow up as recommended by your healthcare provider
-"""
+**Findings:** {'; '.join(findings) if findings else 'No specific patterns detected'}"""
 
 # Global instance
 report_analyzer = ReportAnalyzer()

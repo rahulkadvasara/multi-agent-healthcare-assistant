@@ -8,7 +8,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Database:
-    def __init__(self, db_path: str = "healthcare.db"):
+    def __init__(self, db_path: str = None):
+        # Always use the same database file regardless of working directory
+        if db_path is None:
+            # Get the directory where this database.py file is located
+            import os
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            db_path = os.path.join(current_dir, "healthcare.db")
+        
         self.db_path = db_path
         self.init_database()
     

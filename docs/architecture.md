@@ -1,340 +1,417 @@
-# System Architecture Documentation
+# Healthcare Support System Architecture
 
 ## Overview
+The Healthcare Support System is a comprehensive AI-powered platform designed to assist users with medication management, health queries, and medical report analysis. The system employs a sophisticated multi-agent architecture with specialized AI agents, real-time drug interaction checking using RxNorm API, automated scheduling, and modern glass morphism UI design.
 
-The Multi-Agent Healthcare Support System is built using a microservices-inspired architecture with specialized AI agents, each responsible for specific healthcare domains. The system provides a unified interface while maintaining modular, scalable components.
+## System Architecture
 
-## Architecture Diagram
-
+### High-Level Architecture
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Frontend Layer                           │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
-│  │ login.html  │  │dashboard.html│  │  style.css  │             │
-│  └─────────────┘  └─────────────┘  └─────────────┘             │
-│                           │                                     │
-│                    ┌─────────────┐                              │
-│                    │ script.js   │                              │
-│                    └─────────────┘                              │
-└─────────────────────────────────────────────────────────────────┘
-                               │
-                        HTTP/REST API
-                               │
-┌─────────────────────────────────────────────────────────────────┐
-│                      FastAPI Backend                            │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐                                                │
-│  │   app.py    │  ← Main FastAPI application                    │
-│  └─────────────┘                                                │
-│         │                                                       │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │              Agent Coordination Layer                        ││
-│  │  ┌─────────────┐                                            ││
-│  │  │coordinator.py│ ← Routes requests to specialized agents   ││
-│  │  └─────────────┘                                            ││
-│  └─────────────────────────────────────────────────────────────┘│
-│         │                                                       │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │                Specialized Agents                           ││
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐        ││
-│  │  │report_       │ │symptom_      │ │drug_         │        ││
-│  │  │analyzer.py   │ │checker.py    │ │interaction.py│        ││
-│  │  └──────────────┘ └──────────────┘ └──────────────┘        ││
-│  │                                                             ││
-│  │  ┌──────────────┐                                          ││
-│  │  │chatbot.py    │                                          ││
-│  │  └──────────────┘                                          ││
-│  └─────────────────────────────────────────────────────────────┘│
-│         │                                                       │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │                  Utility Services                           ││
-│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐        ││
-│  │  │llama_api.py  │ │   ocr.py     │ │email_service.py│      ││
-│  │  └──────────────┘ └──────────────┘ └──────────────┘        ││
-│  └─────────────────────────────────────────────────────────────┘│
-│         │                                                       │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │              Data & Scheduling Layer                        ││
-│  │  ┌──────────────┐ ┌──────────────┐                         ││
-│  │  │database.py   │ │scheduler.py  │                         ││
-│  │  └──────────────┘ └──────────────┘                         ││
-│  └─────────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────┘
-                               │
-                    ┌─────────────────────┐
-                    │   External Services  │
-                    ├─────────────────────┤
-                    │ ┌─────────────────┐ │
-                    │ │ GroqCloud       │ │
-                    │ │ (LLaMA API)     │ │
-                    │ └─────────────────┘ │
-                    │ ┌─────────────────┐ │
-                    │ │ SMTP Server     │ │
-                    │ │ (Email)         │ │
-                    │ └─────────────────┘ │
-                    │ ┌─────────────────┐ │
-                    │ │ Tesseract OCR   │ │
-                    │ │ (Local)         │ │
-                    │ └─────────────────┘ │
-                    └─────────────────────┘
-                               │
-                    ┌─────────────────────┐
-                    │   Data Storage      │
-                    ├─────────────────────┤
-                    │ ┌─────────────────┐ │
-                    │ │ SQLite Database │ │
-                    │ │ - Users         │ │
-                    │ │ - Reminders     │ │
-                    │ └─────────────────┘ │
-                    │ ┌─────────────────┐ │
-                    │ │ Environment     │ │
-                    │ │ Variables       │ │
-                    │ │ (.env file)     │ │
-                    │ └─────────────────┘ │
-                    └─────────────────────┘
+┌─────────────────────────┐    ┌─────────────────────────┐    ┌─────────────────────────┐
+│       Frontend          │    │        Backend          │    │     External            │
+│   (Modern Web App)      │◄──►│      (FastAPI)          │◄──►│     Services            │
+│ • Glass Morphism UI     │    │ • Multi-Agent System    │    │ • RxNorm API (NIH)      │
+│ • Real-time Chat        │    │ • Drug Interaction API  │    │ • Groq AI (LLaMA)       │
+│ • Interactive Reminders │    │ • OCR Processing        │    │ • SMTP Email Service    │
+│ • File Upload (OCR)     │    │ • Automated Scheduling  │    │ • Tesseract OCR         │
+│ • Responsive Design     │    │ • Session Management    │    │ • APScheduler           │
+└─────────────────────────┘    └─────────────────────────┘    └─────────────────────────┘
 ```
 
-## Component Details
+### Detailed System Architecture
 
-### 1. Frontend Layer
-
-**Technologies**: HTML5, CSS3, JavaScript, Bootstrap 5
-
-**Components**:
-- `login.html`: Authentication interface with login/register forms
-- `dashboard.html`: Main application interface with chat and reminders
-- `style.css`: Custom styling with healthcare-themed design
-- `script.js`: Client-side logic for API communication and UI interactions
-
-**Key Features**:
-- Responsive design for desktop and mobile
-- Real-time chat interface similar to ChatGPT
-- Drag-and-drop file upload functionality
-- Tab-based navigation between features
-
-### 2. API Gateway (FastAPI)
-
-**File**: `app.py`
-
-**Responsibilities**:
-- HTTP request routing and validation
-- Authentication and authorization
-- File upload handling
-- Error handling and response formatting
-- CORS configuration for cross-origin requests
-
-**Endpoints**:
 ```
-POST /register          - User registration
-POST /login            - User authentication
-POST /chat             - AI chat interactions
-POST /upload-report    - Medical report upload and analysis
-POST /add-reminder     - Create medication reminder
-GET  /get-reminders    - Retrieve user reminders
-DELETE /delete-reminder - Remove reminder
-GET  /health           - System health check
-POST /test-email       - Email configuration test
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                                Frontend Layer                                        │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                │
+│  │ login.html  │  │dashboard.html│  │  style.css  │  │ script.js   │                │
+│  │ • Auth UI   │  │ • Chat UI    │  │ • Glass     │  │ • API Calls │                │
+│  │ • Register  │  │ • Reminders  │  │ • Morphism  │  │ • File Upload│               │
+│  │ • Validation│  │ • File Upload│  │ • Animations│  │ • Real-time │                │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘                │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+                                           │
+                                    HTTP/REST API
+                                           │
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                                Backend Layer                                         │
+├─────────────────────────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐│
+│  │                           FastAPI Application (app.py)                          ││
+│  │  • Authentication Endpoints    • Chat Endpoints    • File Upload                ││
+│  │  • Reminder Management        • Health Checks     • Error Handling              ││
+│  └─────────────────────────────────────────────────────────────────────────────────┘│
+│                                           │                                         │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐│
+│  │                        Agent Coordination Layer                                 ││
+│  │  ┌─────────────────────────────────────────────────────────────────────────────┐││
+│  │  │                    coordinator.py                                           │││
+│  │  │  • Smart Request Routing    • Context Management                            │││
+│  │  │  • Agent Selection Logic    • Response Formatting                           │││
+│  │  │  • Error Recovery          • Load Balancing                                 │││
+│  │  └─────────────────────────────────────────────────────────────────────────────┘││
+│  └─────────────────────────────────────────────────────────────────────────────────┘│
+│                                           │                                         │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐│
+│  │                          Specialized Agents                                     ││
+│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐            ││
+│  │  │drug_         │ │symptom_      │ │chatbot.py    │ │report_       │            ││
+│  │  │interaction.py│ │checker.py    │ │• Health Info │ │analyzer.py   │            ││
+│  │  │• RxNorm API  │ │• AI Analysis │ │• Wellness    │ │• OCR Text    │            ││
+│  │  │• Safety Check│ │• Triage      │ │• Education   │ │• AI Analysis │            ││
+│  │  │• Reminders   │ │• Emergency   │ │• Resources   │ │• Findings    │            ││
+│  │  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘            ││
+│  └─────────────────────────────────────────────────────────────────────────────────┘│
+│                                           │                                         │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐│
+│  │                            Utility Services                                     ││
+│  │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────┐            ││
+│  │  │drug_         │ │llama_api.py  │ │email_        │ │ocr.py        │            ││
+│  │  │interaction_  │ │• Groq Client │ │service.py    │ │• Tesseract   │            ││
+│  │  │tool.py       │ │• AI Models   │ │• SMTP        │ │• Image Proc  │            ││
+│  │  │• RxNorm API  │ │• Fallbacks   │ │• Templates   │ │• Text Clean  │            ││
+│  │  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────┘            ││
+│  │                                                                                 ││
+│  │  ┌──────────────┐                                                               ││
+│  │  │reminder_     │                                                               ││
+│  │  │parser.py     │                                                               ││
+│  │  │• NLP Parsing │                                                               ││
+│  │  │• Command Rec │                                                               ││
+│  │  └──────────────┘                                                               ││
+│  └─────────────────────────────────────────────────────────────────────────────────┘│
+│                                           │                                         │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐│
+│  │                         Data & Scheduling Layer                                 ││
+│  │  ┌──────────────┐                    ┌──────────────┐                           ││
+│  │  │database.py   │                    │scheduler.py  │                           ││
+│  │  │• SQLite DB   │                    │• APScheduler │                           ││
+│  │  │• User Auth   │                    │• Email Alerts│                           ││
+│  │  │• Reminders   │                    │• Cron Jobs   │                           ││
+│  │  │• Sessions    │                    │• Background  │                           ││
+│  │  └──────────────┘                    └──────────────┘                           ││
+│  └─────────────────────────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────────────────────────┘
+                                           │
+                                  External Services
+                                           │
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│  ┌──────────────┐ ┌──────────────┐ ┌───────────────┐ ┌──────────────┐               │
+│  │RxNorm API    │ │Groq AI       │ │Email SMTP     │ │Tesseract     │               │
+│  │• Drug Info   │ │• LLaMA Models│ │• Gmail/SMTP   │ │• OCR Engine  │               │
+│  │• Interactions│ │• Healthcare  │ │• Notifications│ │• Text Extract│               │
+│  │• RxCUI Codes │ │• NLP         │ │• Reminders    │ │• Image Proc  │               │
+│  └──────────────┘ └──────────────┘ └───────────────┘ └──────────────┘               │
+└─────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 3. Agent Coordination Layer
+## Enhanced Component Breakdown
 
-**File**: `agents/coordinator.py`
+### Frontend Layer (Modern Web Application)
+- **Technology Stack**: HTML5, CSS3 (Modern), JavaScript (ES6+)
+- **Design System**: 
+  - Glass morphism with backdrop blur effects
+  - Gradient backgrounds and modern color palette
+  - Smooth animations and transitions (CSS transitions)
+  - Responsive design with mobile-first approach
+  - Inter font family for modern typography
 
-**Purpose**: Intelligent request routing to specialized agents based on content analysis
+#### Key Components:
+- **login.html**: Authentication interface with register/login toggle
+- **dashboard.html**: Main application interface with tabbed navigation
+- **style.css**: Comprehensive styling with CSS variables and modern design
+- **script.js**: Frontend logic, API communication, real-time updates
 
-**Routing Logic**:
-- **Report Analysis**: Keywords like "report", "test result", "lab result"
-- **Symptom Checking**: Keywords like "symptom", "pain", "fever", "headache"
-- **Drug Interactions**: Keywords like "drug", "medication", "interaction"
-- **General Healthcare**: Default fallback for other health questions
+#### Features:
+- **Interactive Chat Interface**: Real-time messaging with typing indicators
+- **Smart Reminder Dashboard**: Add, edit, delete medication reminders
+- **Medical Report Analyzer**: Drag-and-drop file upload with OCR processing
+- **Drug Interaction Warnings**: Modal dialogs with detailed safety information
+- **User Authentication**: Secure login with session management
+- **Responsive Design**: Mobile-optimized interface
 
-### 4. Specialized Agents
+### Backend Layer (FastAPI Multi-Agent System)
+- **Technology**: FastAPI (Python 3.8+) with async/await
+- **Architecture Pattern**: Multi-agent system with intelligent routing
+- **Database**: SQLite with SQLAlchemy ORM
 
-#### 4.1 Report Analyzer Agent
-**File**: `agents/report_analyzer.py`
-- Processes OCR-extracted text from medical reports
-- Provides structured analysis with key findings
-- Includes medical disclaimers and recommendations
+#### Core Application (app.py):
+- **Authentication Endpoints**: `/register`, `/login`, `/logout`
+- **Chat Endpoints**: `/chat` with AI agent routing
+- **Reminder Management**: `/add-reminder`, `/get-reminders`, `/delete-reminder`, `/force-add-reminder`
+- **File Processing**: `/upload-report` with OCR analysis
+- **Health Monitoring**: `/health`, `/test-email`
+- **CORS Support**: Cross-origin resource sharing enabled
+- **Error Handling**: Comprehensive exception handling
 
-#### 4.2 Symptom Checker Agent
-**File**: `agents/symptom_checker.py`
-- Evaluates user-reported symptoms
-- Provides emergency detection and alerts
-- Offers triage recommendations and care guidance
+#### Agent Coordination System (coordinator.py):
+- **Smart Routing**: NLP-based intent recognition
+- **Context Management**: User session and conversation state
+- **Agent Selection**: Keyword-based routing to specialized agents
+- **Response Formatting**: Consistent output formatting
+- **Error Recovery**: Graceful fallbacks and error handling
 
-#### 4.3 Drug Interaction Agent
-**File**: `agents/drug_interaction.py`
-- Identifies potential medication conflicts
-- Maintains basic drug interaction database
-- Provides safety warnings and recommendations
+#### Specialized AI Agents:
 
-#### 4.4 Healthcare Chatbot Agent
-**File**: `agents/chatbot.py`
-- Handles general health information queries
-- Categorizes topics (nutrition, exercise, mental health, etc.)
-- Provides educational content and resources
+**1. Drug Interaction Agent (drug_interaction.py)**
+- **Purpose**: Comprehensive medication safety management
+- **Capabilities**:
+  - Real-time RxNorm API integration for drug interaction checking
+  - Natural language reminder parsing and management
+  - Personalized risk assessment with severity classification
+  - Confirmation workflows for dangerous interactions
+  - Local fallback database for offline operation
+- **Integration**: Direct database access for user reminders
+- **Safety Features**: Multi-layer validation, force-add with warnings
 
-### 5. Utility Services
+**2. Symptom Checker Agent (symptom_checker.py)**
+- **Purpose**: Intelligent symptom analysis with safety protocols
+- **Capabilities**:
+  - Multi-symptom analysis with AI-powered interpretation
+  - Emergency detection with immediate care recommendations
+  - Comprehensive health guidance (6-8 sentences)
+  - Symptom categorization and triage
+  - Red flag detection for urgent medical attention
+- **AI Integration**: Groq LLaMA models for natural language processing
 
-#### 5.1 LLaMA API Service
-**File**: `utils/llama_api.py`
-- Interfaces with GroqCloud for LLaMA model access
-- Provides specialized prompts for different healthcare tasks
-- Handles API errors and fallback responses
+**3. Healthcare Chatbot (chatbot.py)**
+- **Purpose**: General health education and wellness guidance
+- **Capabilities**:
+  - Topic-specific responses (nutrition, exercise, mental health)
+  - Evidence-based health information delivery
+  - Comprehensive responses (6+ sentences)
+  - Resource recommendations and educational content
+  - Fallback responses for AI service unavailability
+- **Knowledge Areas**: Nutrition, exercise, mental health, prevention, chronic conditions
 
-#### 5.2 OCR Service
-**File**: `utils/ocr.py`
-- Processes uploaded medical report images
-- Extracts text using Tesseract OCR
-- Validates and cleans extracted text
+**4. Medical Report Analyzer (report_analyzer.py)**
+- **Purpose**: Intelligent document analysis and interpretation
+- **Capabilities**:
+  - OCR text processing and validation
+  - AI-powered medical text analysis
+  - Key findings identification and explanation
+  - Clinical interpretation in layman's terms
+  - Report validation and error handling
+- **Integration**: OCR service integration with Tesseract
 
-#### 5.3 Email Service
-**File**: `utils/email_service.py`
-- Sends medication reminder emails
-- Configurable SMTP settings
-- HTML email formatting with healthcare branding
+### Utility Services Layer
 
-### 6. Data Layer
+#### Drug Interaction Tool (drug_interaction_tool.py)
+- **RxNorm API Integration**: Real-time drug interaction checking
+- **Local Database**: Fallback interaction database
+- **Comprehensive Analysis**: Multi-drug interaction checking
+- **Response Formatting**: Structured interaction reports
+- **Error Handling**: Graceful API failure management
 
-#### 6.1 Database Service
-**File**: `database.py`
-- SQLite database management
-- User authentication and management
-- Reminder storage and retrieval
-- Secure password hashing with bcrypt
+#### AI Service (llama_api.py)
+- **Groq Integration**: LLaMA model access via GroqCloud
+- **Healthcare Specialization**: Medical context optimization
+- **Fallback Responses**: Service unavailability handling
+- **Timeout Management**: Request timeout and retry logic
+- **Response Processing**: Text formatting and validation
 
-#### 6.2 Scheduler Service
-**File**: `scheduler.py`
-- Background task scheduling with APScheduler
-- Automated reminder checking and email sending
-- Configurable reminder frequencies
+#### Email Service (email_service.py)
+- **SMTP Integration**: Gmail and custom SMTP support
+- **Template System**: HTML email templates
+- **Reminder Notifications**: Automated medication reminders
+- **Configuration**: Environment-based email settings
+- **Error Handling**: Delivery failure management
+
+#### OCR Processing (ocr.py)
+- **Tesseract Integration**: High-accuracy text extraction
+- **Image Processing**: PIL-based image handling
+- **Text Cleaning**: Post-processing and formatting
+- **Medical Validation**: Report content verification
+- **Multi-format Support**: JPG, PNG, and other image formats
+
+#### Reminder Parser (reminder_parser.py)
+- **Natural Language Processing**: Command interpretation
+- **Pattern Matching**: Regex-based parsing
+- **Data Extraction**: Medicine, dosage, frequency, time parsing
+- **Validation**: Input validation and normalization
+- **Response Formatting**: Confirmation message generation
+
+### Data & Scheduling Layer
+
+#### Database System (database.py)
+- **SQLite Database**: Lightweight, file-based storage
+- **User Management**: Registration, authentication, sessions
+- **Reminder Storage**: Medication schedules and preferences
+- **Security**: Bcrypt password hashing
+- **Data Integrity**: Foreign key constraints and validation
+
+#### Automated Scheduler (scheduler.py)
+- **APScheduler Integration**: Background job scheduling
+- **Cron Jobs**: Time-based reminder execution
+- **Email Automation**: Automated reminder notifications
+- **Health Monitoring**: Scheduler status and health checks
+- **Error Recovery**: Failed job handling and retry logic
 
 ## Data Flow Patterns
 
-### 1. Chat Interaction Flow
+### 1. Intelligent Chat Flow
 ```
-User Message → Frontend → FastAPI → Coordinator → Specialized Agent → LLaMA API → Response Formatting → Frontend Display
-```
-
-### 2. File Upload Flow
-```
-Image Upload → Frontend → FastAPI → OCR Processing → Text Validation → Report Analysis → AI Processing → Formatted Response
+User Input → Frontend Validation → API Request → Agent Coordinator → 
+Intent Analysis → Agent Selection → Specialized Processing → 
+AI Enhancement → Response Generation → Frontend Display
 ```
 
-### 3. Reminder Flow
+### 2. Drug Interaction Management Flow
 ```
-User Input → Frontend → FastAPI → Database Storage → Scheduler Registration → Background Processing → Email Notification
+User Request → NLP Parsing → RxNorm API Lookup → Interaction Analysis → 
+Risk Assessment → Database Check → Safety Validation → 
+User Confirmation → Database Update → Notification
+```
+
+### 3. Medical Report Analysis Flow
+```
+File Upload → Format Validation → OCR Processing → Text Extraction → 
+Medical Validation → AI Analysis → Clinical Interpretation → 
+Report Generation → User Display
+```
+
+### 4. Automated Reminder Flow
+```
+Scheduler Trigger → Database Query → Active Reminders → 
+Email Generation → SMTP Delivery → Delivery Confirmation → 
+Status Logging
 ```
 
 ## Security Architecture
 
-### Authentication
-- Simple username/password authentication
-- Bcrypt password hashing (cost factor: 12)
-- Session-based user management
-- No JWT tokens for simplicity
+### Multi-layer Authentication
+- **Session Management**: Secure token-based authentication
+- **Password Security**: Bcrypt hashing with salt
+- **Input Validation**: Comprehensive sanitization and validation
+- **API Security**: CORS configuration and request validation
+- **Error Handling**: Secure error messages without information leakage
 
 ### Data Protection
-- Medical data is NOT stored in database
-- Only user credentials and reminders are persisted
-- Environment variables for sensitive configuration
-- Input validation and sanitization
+- **Local Storage**: SQLite database with file-level security
+- **Session Security**: Secure session management
+- **Input Sanitization**: XSS and injection prevention
+- **File Upload Security**: Type validation and size limits
+- **API Rate Limiting**: Request throttling (configurable)
 
-### API Security
-- CORS middleware configuration
-- Request rate limiting (future enhancement)
-- Input validation with Pydantic models
-- Error handling without information disclosure
+### Privacy Compliance
+- **Local-first Architecture**: Minimal external data sharing
+- **User Consent**: Clear data usage policies
+- **Data Retention**: Configurable retention policies
+- **Audit Logging**: Comprehensive activity tracking
+- **Right to Deletion**: Complete data removal capabilities
 
-## Scalability Considerations
+## Integration Ecosystem
 
-### Horizontal Scaling
-- Stateless API design enables load balancing
-- Database connection pooling for concurrent requests
-- Asynchronous processing for file uploads
-- Microservices-ready architecture
+### External APIs
+- **RxNorm API (NIH)**: 
+  - Drug information and NDC codes
+  - Real-time interaction checking
+  - RxCUI code resolution
+  - Comprehensive drug database access
+- **Groq AI Platform**: 
+  - LLaMA model access (llama-3.3-70b-versatile)
+  - Natural language processing
+  - Medical text analysis
+  - Fallback response generation
+- **SMTP Services**: 
+  - Gmail integration
+  - Custom SMTP server support
+  - Template-based email generation
+  - Delivery status tracking
 
-### Performance Optimization
-- Efficient database queries with proper indexing
-- Caching strategies for repeated AI requests
-- Lazy loading of heavy components
-- Optimized frontend asset delivery
+### Internal Microservices
+- **OCR Service**: Tesseract-based text extraction
+- **Scheduler Service**: APScheduler background processing
+- **Database Service**: SQLite with SQLAlchemy ORM
+- **Authentication Service**: Session-based user management
+- **File Processing Service**: Image upload and validation
 
-### Monitoring and Logging
-- Health check endpoints for system monitoring
-- Structured logging for debugging
-- Error tracking and alerting
-- Performance metrics collection
+## Performance & Scalability
+
+### Optimization Strategies
+- **Async Processing**: FastAPI async/await patterns
+- **Database Optimization**: Indexed queries and connection pooling
+- **Caching Strategy**: In-memory caching for frequent operations
+- **API Rate Limiting**: Intelligent request throttling
+- **Error Recovery**: Graceful degradation and fallback mechanisms
+
+### Scalability Architecture
+- **Stateless Design**: Session-independent API endpoints
+- **Modular Agents**: Independent agent scaling
+- **Database Migration**: SQLite to PostgreSQL upgrade path
+- **Container Ready**: Docker-compatible architecture
+- **Load Balancing**: Horizontal scaling support
+
+## Modern UI/UX Architecture
+
+### Design System
+- **CSS Variables**: Consistent theming and color management
+- **Glass Morphism**: Modern backdrop blur effects
+- **Animation Framework**: Smooth transitions and micro-interactions
+- **Responsive Grid**: Mobile-first responsive design
+- **Typography**: Inter font family with optimized loading
+
+### User Experience Features
+- **Real-time Feedback**: Instant visual responses and loading states
+- **Progressive Enhancement**: Graceful degradation for older browsers
+- **Accessibility**: WCAG 2.1 AA compliance considerations
+- **Performance**: Optimized loading and rendering
+- **Error Handling**: User-friendly error messages and recovery
 
 ## Deployment Architecture
 
 ### Development Environment
+- **Local Development**: SQLite database, FastAPI dev server
+- **Hot Reload**: Automatic code reloading during development
+- **Debug Mode**: Comprehensive logging and error reporting
+- **CORS Configuration**: Development-friendly CORS settings
+
+### Production Considerations
+- **Database Migration**: PostgreSQL or MySQL upgrade
+- **Reverse Proxy**: Nginx configuration for static files
+- **SSL/TLS**: HTTPS encryption and certificate management
+- **Environment Variables**: Secure configuration management
+- **Monitoring**: Health checks and performance monitoring
+
+### Container Architecture
 ```
-Local Machine → Python Virtual Environment → SQLite Database → Local SMTP Server
-```
-
-### Production Environment (Recommended)
-```
-Load Balancer → FastAPI Containers → PostgreSQL Database → External SMTP Service
-```
-
-### Container Strategy
-```dockerfile
-# Example Dockerfile structure
-FROM python:3.9-slim
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-COPY . .
-EXPOSE 8000
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
-```
-
-## Configuration Management
-
-### Environment Variables
-```bash
-# Core API Configuration
-GROQ_API_KEY=your_groq_api_key
-SECRET_KEY=your_secret_key
-
-# Database Configuration
-DATABASE_URL=sqlite:///./healthcare.db
-
-# Email Configuration
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_app_password
-
-# Application Settings
-DEBUG=False
-LOG_LEVEL=INFO
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│   Frontend      │  │    Backend      │  │   Database      │
+│   (Nginx)       │  │   (FastAPI)     │  │  (SQLite/PG)    │
+│   Container     │  │   Container     │  │   Container     │
+└─────────────────┘  └─────────────────┘  └─────────────────┘
 ```
 
-### Configuration Files
-- `.env`: Environment-specific variables
-- `requirements.txt`: Python dependencies
-- Database schema: Defined in `database.py`
+## Monitoring & Analytics
 
-## Error Handling Strategy
+### Application Monitoring
+- **Health Endpoints**: `/health` with service status
+- **Performance Metrics**: Response times and throughput
+- **Error Tracking**: Exception monitoring and logging
+- **User Analytics**: Usage patterns and feature adoption
 
-### Frontend Error Handling
-- User-friendly error messages
-- Loading states and progress indicators
-- Graceful degradation for offline scenarios
-- Retry mechanisms for failed requests
+### System Health
+- **Database Connectivity**: Connection pool monitoring
+- **External API Status**: RxNorm and Groq API availability
+- **Scheduler Health**: Background job execution status
+- **Email Service**: SMTP delivery success rates
 
-### Backend Error Handling
-- Structured exception handling
-- Appropriate HTTP status codes
-- Detailed logging for debugging
-- Fallback responses when AI services fail
+## Future Enhancements
 
-### Data Validation
-- Pydantic models for request validation
-- File type and size validation
-- Input sanitization and cleaning
-- Database constraint enforcement
+### Short-term Roadmap (3-6 months)
+- **Mobile PWA**: Progressive Web App development
+- **Voice Interface**: Speech-to-text integration
+- **Advanced Analytics**: Usage metrics and health insights
+- **API Expansion**: RESTful API for third-party integration
 
-This architecture provides a solid foundation for a scalable, maintainable healthcare support system while maintaining simplicity and focusing on core functionality.
+### Long-term Vision (6-12 months)
+- **Custom AI Models**: Healthcare-specific model training
+- **Telemedicine Integration**: Video consultation support
+- **Wearable Integration**: IoT device connectivity
+- **Multi-language Support**: Internationalization
+
+### Enterprise Features (12+ months)
+- **Multi-tenant Architecture**: Healthcare provider support
+- **FHIR Compliance**: Healthcare interoperability standards
+- **Advanced AI**: Diagnostic assistance capabilities
+- **Cloud Deployment**: AWS/Azure/GCP support
