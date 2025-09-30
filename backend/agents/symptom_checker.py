@@ -1,11 +1,49 @@
 from utils.llama_api import llama_api
 from typing import Optional, List, Dict
+try:
+    from crewai import Agent, Task, Crew
+    _CREW_AVAILABLE = True
+except Exception as _e:
+    _CREW_AVAILABLE = False
 
 class SymptomChecker:
     """Specialized agent for symptom analysis and triage"""
     
     def __init__(self):
         self.agent_name = "Symptom Assessment Specialist"
+        self._crew_agent = None
+        self.emergency_keywords = [
+            'chest pain', 'difficulty breathing', 'shortness of breath',
+            'severe headache', 'confusion', 'loss of consciousness',
+            'severe bleeding', 'severe burns', 'poisoning',
+            'severe allergic reaction', 'stroke symptoms',
+            'heart attack', 'seizure', 'suicide'
+        ]
+        if _CREW_AVAILABLE:
+            try:
+                custom_llm = self._create_custom_groq_llm()
+                self._crew_agent = Agent(
+                    role='Symptom Assessment Specialist',
+                    goal='Analyze symptoms, provide likely causes, home-care advice, and when to seek care.',
+                    backstory=(
+                        'You triage symptoms conservatively with patient safety first. '
+                        'You provide clear, layperson-friendly guidance and highlight red flags.'
+                    ),
+                    allow_delegation=False,
+                    verbose=False,
+                    llm=custom_llm
+                )
+            except Exception:
+                self._crew_agent = None
+
+    def _create_custom_groq_llm(self):
+        from utils.llama_api import llama_api as _llama
+        class _GroqLLM:
+            def __call__(self, prompt: str) -> str:
+                return _llama.generate_response(prompt)
+            def predict(self, text: str) -> str:
+                return _llama.generate_response(text)
+        return _GroqLLM()
         self.emergency_keywords = [
             'chest pain', 'difficulty breathing', 'shortness of breath',
             'severe headache', 'confusion', 'loss of consciousness',
@@ -21,8 +59,28 @@ class SymptomChecker:
         if self._is_emergency(symptoms):
             return self._emergency_response()
         
-        # Use LLaMA API for detailed analysis
-        analysis = llama_api.check_symptoms(symptoms)
+        # Prefer CrewAI; fallback to existing path
+        analysis = None
+        if self._crew_agent is not None:
+            try:
+                task = Task(
+                    description=(
+                        'Provide a symptom assessment with likely causes, self-care advice, monitoring, '
+                        'and when to seek medical attention. Use clear language. '
+                        f'Symptoms: {symptoms}'
+                    ),
+                    expected_output=(
+                        'A clear 4-8 sentence assessment with conservative safety guidance and red flags.'
+                    ),
+                    agent=self._crew_agent
+                )
+                crew = Crew(agents=[self._crew_agent], tasks=[task], verbose=False)
+                analysis = str(crew.kickoff())
+            except Exception:
+                analysis = None
+        if analysis is None:
+            # Use existing llama path
+            analysis = llama_api.check_symptoms(symptoms)
         
         if analysis:
             return self._format_symptom_analysis(analysis, symptoms)

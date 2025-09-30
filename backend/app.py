@@ -91,10 +91,11 @@ async def chat_with_ai(message: ChatMessage):
         # Pass user_id in context for drug interaction checking
         context = {"user_id": message.user_id}
         response = coordinator.route_request(message.message, context)
-        return {"response": response}
+        agent_name = coordinator.get_current_agent_name()
+        return {"response": response, "agent": agent_name}
     except Exception as e:
         print(f"Chat error: {e}")
-        return {"response": "I apologize, but I'm experiencing technical difficulties. Please try again later."}
+        return {"response": "I apologize, but I'm experiencing technical difficulties. Please try again later.", "agent": "Assistant"}
 
 @app.post("/upload-report")
 async def upload_medical_report(file: UploadFile = File(...), user_id: int = Form(...)):

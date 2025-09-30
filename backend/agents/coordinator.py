@@ -6,6 +6,7 @@ from utils.llama_api import llama_api
 class CoordinatorAgent:
     def __init__(self):
         self.setup_agents()
+        self._current_agent_name = None
     
     def setup_agents(self):
         """Setup specialized agents for different healthcare tasks"""
@@ -32,6 +33,7 @@ class CoordinatorAgent:
             'report', 'test result', 'lab result', 'blood test', 'x-ray', 
             'scan', 'mri', 'ct scan', 'analyze', 'interpretation'
         ]):
+            self._current_agent_name = getattr(self.report_analyzer, 'agent_name', 'Report Analyzer')
             return self._handle_report_analysis(message, context)
         
         # Check for symptom checking request
@@ -39,6 +41,7 @@ class CoordinatorAgent:
             'symptom', 'pain', 'ache', 'fever', 'headache', 'nausea', 
             'dizzy', 'tired', 'cough', 'sore', 'hurt', 'feel', 'sick'
         ]):
+            self._current_agent_name = getattr(self.symptom_checker, 'agent_name', 'Symptom Checker')
             return self._handle_symptom_check(message)
         
         # Check for drug interaction request OR reminder request
@@ -50,10 +53,12 @@ class CoordinatorAgent:
             'delete', 'remove', 'cancel', 'stop', 'edit', 'change', 'update',
             'show my reminders', 'list my reminders', 'my reminders'
         ]):
+            self._current_agent_name = getattr(self.drug_interaction_checker, 'agent_name', 'Drug Interaction')
             return self._handle_drug_interaction(message, user_id)
         
         # Default to general healthcare chatbot
         else:
+            self._current_agent_name = getattr(self.healthcare_chatbot, 'agent_name', 'Healthcare Chatbot')
             return self._handle_general_question(message)
     
     def _handle_report_analysis(self, message: str, context: Dict[str, Any] = None) -> str:
@@ -80,6 +85,10 @@ I can analyze various types of medical reports including:
 - Lab reports
 
 Once you upload the image, I'll extract the text and provide a detailed analysis with explanations in simple terms."""
+
+    def get_current_agent_name(self) -> str:
+        """Return the name of the last agent selected by routing."""
+        return self._current_agent_name or "Assistant"
     
     def _handle_symptom_check(self, message: str) -> str:
         """Handle symptom checking requests"""

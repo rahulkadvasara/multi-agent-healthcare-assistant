@@ -1,11 +1,42 @@
 from utils.llama_api import llama_api
 from typing import Optional
+try:
+    from crewai import Agent, Task, Crew
+    _CREW_AVAILABLE = True
+except Exception as _e:
+    _CREW_AVAILABLE = False
 
 class ReportAnalyzer:
     """Specialized agent for analyzing medical reports"""
     
     def __init__(self):
         self.agent_name = "Medical Report Analyzer"
+        self._crew_agent = None
+        if _CREW_AVAILABLE:
+            try:
+                custom_llm = self._create_custom_groq_llm()
+                self._crew_agent = Agent(
+                    role='Medical Report Analyzer',
+                    goal='Explain medical report text in clear lay language with key findings and guidance.',
+                    backstory=(
+                        'You review OCR-extracted medical text and summarize key findings, abnormalities, and next steps '
+                        'in plain language for patients. You avoid jargon and keep safety first.'
+                    ),
+                    allow_delegation=False,
+                    verbose=False,
+                    llm=custom_llm
+                )
+            except Exception:
+                self._crew_agent = None
+
+    def _create_custom_groq_llm(self):
+        from utils.llama_api import llama_api as _llama
+        class _GroqLLM:
+            def __call__(self, prompt: str) -> str:
+                return _llama.generate_response(prompt)
+            def predict(self, text: str) -> str:
+                return _llama.generate_response(text)
+        return _GroqLLM()
     
     def analyze_report(self, ocr_text: str) -> Optional[str]:
         """Analyze medical report text and provide insights"""
@@ -13,8 +44,26 @@ class ReportAnalyzer:
         if not ocr_text or len(ocr_text.strip()) < 20:
             return "The extracted text is too short or unclear to analyze. Please upload a clearer image."
         
-        # Use LLaMA API for analysis
-        analysis = llama_api.analyze_medical_report(ocr_text)
+        # Prefer CrewAI; fallback to existing llama path
+        analysis = None
+        if self._crew_agent is not None:
+            try:
+                task = Task(
+                    description=(
+                        'Summarize the following medical report text, listing key findings, simple explanations, any '
+                        'abnormalities, and general recommendations. Keep it 5-6 sentences, layperson-friendly. '
+                        f'Report text: {ocr_text}'
+                    ),
+                    expected_output='A single paragraph (5-6 sentences) in plain language with key findings and guidance.',
+                    agent=self._crew_agent
+                )
+                crew = Crew(agents=[self._crew_agent], tasks=[task], verbose=False)
+                analysis = str(crew.kickoff())
+            except Exception:
+                analysis = None
+        if analysis is None:
+            # Existing llama fallback
+            analysis = llama_api.analyze_medical_report(ocr_text)
         
         if analysis:
             return self._format_analysis(analysis, ocr_text)

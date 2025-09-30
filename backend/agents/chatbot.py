@@ -1,11 +1,67 @@
 from utils.llama_api import llama_api
 from typing import Optional
+try:
+    from crewai import Agent, Task, Crew
+    _CREW_AVAILABLE = True
+except Exception as _e:
+    # CrewAI not available; continue with fallback logic
+    _CREW_AVAILABLE = False
 
 class HealthcareChatbot:
     """General healthcare information chatbot"""
     
     def __init__(self):
         self.agent_name = "Healthcare Information Specialist"
+        self._crew_agent = None
+        # Common health topics and responses
+        self.health_topics = {
+            'nutrition': [
+                'diet', 'nutrition', 'vitamins', 'minerals', 'healthy eating',
+                'calories', 'protein', 'carbs', 'fat', 'fiber'
+            ],
+            'exercise': [
+                'exercise', 'workout', 'fitness', 'physical activity',
+                'cardio', 'strength training', 'yoga', 'walking'
+            ],
+            'mental_health': [
+                'stress', 'anxiety', 'depression', 'mental health',
+                'sleep', 'relaxation', 'meditation', 'mood'
+            ],
+            'prevention': [
+                'prevention', 'screening', 'checkup', 'vaccine',
+                'immunization', 'health maintenance'
+            ],
+            'chronic_conditions': [
+                'diabetes', 'hypertension', 'heart disease', 'arthritis',
+                'asthma', 'copd', 'chronic pain'
+            ]
+        }
+        # Attempt to initialize a CrewAI agent but keep behavior identical on failure
+        if _CREW_AVAILABLE:
+            try:
+                custom_llm = self._create_custom_groq_llm()
+                self._crew_agent = Agent(
+                    role='Healthcare Information Specialist',
+                    goal='Provide accurate, easy-to-understand general healthcare information and wellness guidance.',
+                    backstory=(
+                        'You are a knowledgeable healthcare assistant focused on general health topics, '
+                        'wellness, prevention, and patient education. You explain clearly and avoid jargon.'
+                    ),
+                    allow_delegation=False,
+                    verbose=False,
+                    llm=custom_llm
+                )
+            except Exception:
+                self._crew_agent = None
+
+    def _create_custom_groq_llm(self):
+        from utils.llama_api import llama_api as _llama
+        class _GroqLLM:
+            def __call__(self, prompt: str) -> str:
+                return _llama.generate_response(prompt)
+            def predict(self, text: str) -> str:
+                return _llama.generate_response(text)
+        return _GroqLLM()
         
         # Common health topics and responses
         self.health_topics = {
@@ -36,10 +92,32 @@ class HealthcareChatbot:
         
         # Identify topic category
         topic = self._identify_topic(message)
-        
-        # Use AI for response
-        ai_response = llama_api.answer_healthcare_question(message)
-        
+
+        # Prefer CrewAI if available; fallback to existing llama_api path
+        ai_response = None
+        if self._crew_agent is not None:
+            try:
+                task = Task(
+                    description=(
+                        "Answer the user's general healthcare question clearly and helpfully. "
+                        "Avoid diagnosis; provide evidence-based guidance and a friendly tone. "
+                        f"User question: {message}"
+                    ),
+                    expected_output=(
+                        "A concise, informative paragraph (4-8 sentences) with practical guidance and a gentle reminder "
+                        "to consult professionals for medical advice."
+                    ),
+                    agent=self._crew_agent
+                )
+                crew = Crew(agents=[self._crew_agent], tasks=[task], verbose=False)
+                ai_response = str(crew.kickoff())
+            except Exception:
+                ai_response = None
+
+        if ai_response is None:
+            # Use existing llama_api fallback to preserve functionality
+            ai_response = llama_api.answer_healthcare_question(message)
+
         if ai_response:
             return self._format_response(ai_response, topic, message)
         else:

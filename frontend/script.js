@@ -95,7 +95,7 @@ async function sendMessage() {
     chatInput.value = '';
     
     // Show loading
-    const loadingId = addMessageToChat('assistant', '<div class="loading"><div class="spinner"></div></div>');
+    const loadingId = addMessageToChat('assistant', '<div class="loading"><div class="spinner"></div><div class="agent-indicator">Identifying agent…</div></div>');
     
     try {
         const response = await fetch(`${API_BASE}/chat`, {
@@ -110,19 +110,27 @@ async function sendMessage() {
         });
         
         const data = await response.json();
-        
-        // Remove loading message safely
-        const loadingElement = document.getElementById(loadingId);
-        if (loadingElement) {
-            loadingElement.remove();
-            console.log('Chat loading removed successfully');
-        } else {
-            console.warn('Chat loading element not found:', loadingId);
+        // Update the specific loader's agent indicator before removing loader
+        try {
+            if (data.agent) {
+                const container = document.getElementById(loadingId);
+                const indicator = container ? container.querySelector('.agent-indicator') : null;
+                if (indicator) {
+                    indicator.textContent = `Working agent: ${data.agent}`;
+                }
+            }
+        } catch (e) {
+            console.warn('Agent indicator update failed', e);
         }
         
         if (response.ok) {
             console.log('Chat response received:', data.response.substring(0, 100) + '...');
             const messageId = addMessageToChat('assistant', data.response);
+            // Remove loading after showing final message
+            const loadingElement = document.getElementById(loadingId);
+            if (loadingElement) {
+                loadingElement.remove();
+            }
             
             // Check if this is a reminder-related response
             if (data.response.includes('Medication Reminder Added') || 

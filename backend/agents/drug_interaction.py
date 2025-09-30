@@ -1,6 +1,7 @@
 from crewai import Agent, Task, Crew
 from utils.llama_api import llama_api
 from utils.drug_interaction_tool import drug_interaction_checker, drug_rxcui_finder, multi_drug_interaction_checker
+import utils.drug_interaction_tool as drug_interaction_tool
 from database import db
 from typing import Optional, List, Dict
 import re
@@ -73,7 +74,7 @@ class DrugInteractionChecker:
                 from langchain_groq import ChatGroq
                 groq_llm = ChatGroq(
                     groq_api_key=groq_api_key,
-                    model_name="llama3-8b-8192",
+                    model_name="llama-3.3-70b-versatile",
                     temperature=0.1
                 )
                 
@@ -88,65 +89,17 @@ class DrugInteractionChecker:
                     verbose=True,
                     allow_delegation=False,
                     llm=groq_llm,
-                    tools=[drug_interaction_checker, drug_rxcui_finder, multi_drug_interaction_checker]
+                    tools=[
+                        drug_interaction_checker.to_args(),
+                        drug_rxcui_finder.to_args(),
+                        multi_drug_interaction_checker.to_args()
+                    ]
                 )
                 print("✅ CrewAI agent configured with Groq LLM")
                 return
                 
             except Exception as e:
                 print(f"⚠️  langchain-groq approach failed: {e}")
-            
-            # Approach 2: Try with OpenAI-compatible setup (using Groq endpoint)
-            try:
-                from langchain.llms import OpenAI
-                from langchain.chat_models import ChatOpenAI
-                
-                # Create a custom LLM that uses our Groq API
-                custom_llm = self._create_custom_groq_llm(groq_api_key)
-                
-                self.crew_agent = Agent(
-                    role='Clinical Pharmacist and Drug Interaction Specialist',
-                    goal='Analyze drug interactions between new medications and existing patient medications, providing comprehensive safety assessments',
-                    backstory="""You are a highly experienced clinical pharmacist with 15+ years of experience in 
-                    hospital and community pharmacy settings. You specialize in identifying drug interactions, 
-                    contraindications, and medication safety. You have access to the patient's current medication 
-                    list from their reminder system and can cross-reference new medications against their existing 
-                    regimen. You prioritize patient safety and provide clear, actionable recommendations.""",
-                    verbose=True,
-                    allow_delegation=False,
-                    llm=custom_llm
-                )
-                print("✅ CrewAI agent configured with custom Groq LLM")
-                return
-                
-            except Exception as e:
-                print(f"⚠️  Custom LLM approach failed: {e}")
-            
-            # Approach 3: Use CrewAI without custom LLM (will use default but we'll override the execution)
-            try:
-                # Set a dummy OpenAI key to satisfy CrewAI initialization
-                os.environ['OPENAI_API_KEY'] = 'dummy-key-for-crewai-init'
-                
-                self.crew_agent = Agent(
-                    role='Clinical Pharmacist and Drug Interaction Specialist',
-                    goal='Analyze drug interactions between new medications and existing patient medications, providing comprehensive safety assessments',
-                    backstory="""You are a highly experienced clinical pharmacist with 15+ years of experience in 
-                    hospital and community pharmacy settings. You specialize in identifying drug interactions, 
-                    contraindications, and medication safety. You have access to the patient's current medication 
-                    list from their reminder system and can cross-reference new medications against their existing 
-                    regimen. You prioritize patient safety and provide clear, actionable recommendations.""",
-                    verbose=False,  # Reduce verbosity to avoid OpenAI calls
-                    allow_delegation=False
-                )
-                print("✅ CrewAI agent configured (will use custom execution)")
-                return
-                
-            except Exception as e:
-                print(f"⚠️  Default CrewAI approach failed: {e}")
-            
-            # If all approaches fail, use None
-            self.crew_agent = None
-            print("⚠️  All CrewAI approaches failed. Using enhanced local analysis.")
             
         except Exception as e:
             print(f"⚠️  CrewAI agent setup failed: {e}")
@@ -282,7 +235,14 @@ Acetaminophen and paracetamol are the same medication. You should not take both 
             if not new_drugs:
                 return self._general_drug_response(message)
             
-            # Use RxNorm API tool for drug interaction checking
+            # Prefer CrewAI when available; fallback to existing RxNorm-based logic
+            if hasattr(self, 'crew_agent') and self.crew_agent:
+                try:
+                    return self._analyze_with_crewai(message, new_drugs, current_medications, user_id)
+                except Exception as _e:
+                    # Fall back to existing behavior
+                    pass
+            
             return self._check_with_rxnorm_api(message, new_drugs, current_medications, user_id)
             
         except Exception as e:

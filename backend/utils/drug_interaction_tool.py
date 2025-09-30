@@ -5,6 +5,7 @@ This is the ONLY file the agent uses - everything is consolidated here
 
 import requests
 from typing import Optional, List, Dict
+from langchain_core.tools import tool
 
 # Local interaction database for fallback
 LOCAL_INTERACTIONS = {
@@ -27,6 +28,7 @@ LOCAL_INTERACTIONS = {
     }
 }
 
+@tool
 def drug_interaction_checker(drug1_rxcui: str, drug2_rxcui: str) -> str:
     """
     Check if two drugs have a known interaction using RxNorm API.
@@ -74,6 +76,7 @@ def drug_interaction_checker(drug1_rxcui: str, drug2_rxcui: str) -> str:
     except Exception as e:
         return f"❌ Error checking interaction: {str(e)}"
 
+@tool
 def drug_rxcui_finder(drug_name: str) -> str:
     """
     Find RxCUI for a drug name using RxNorm API.
@@ -118,6 +121,7 @@ def drug_rxcui_finder(drug_name: str) -> str:
     except Exception as e:
         return f"❌ Error finding RxCUI: {str(e)}"
 
+@tool
 def multi_drug_interaction_checker(drug_rxcuis: str) -> str:
     """
     Check interactions among multiple drugs using RxNorm API.
