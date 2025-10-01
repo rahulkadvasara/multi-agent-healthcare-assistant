@@ -1,12 +1,13 @@
 # Healthcare Support System
 
-A comprehensive AI-powered healthcare assistant that helps users manage medications, check drug interactions, analyze symptoms, and get reliable health information through a modern, intuitive interface.
+A comprehensive AI-powered healthcare assistant built on the CrewAI framework. CrewAI enables modular, orchestrated multi-agent intelligence—each agent is defined, managed, and coordinated as a CrewAI component. The system helps users manage medications, check drug interactions, analyze symptoms, and get reliable health information through a modern, intuitive interface.
 
 ## 🌟 Features
 
-### 🤖 AI-Powered Multi-Agent System
-- **Intelligent Chat Assistant**: Natural language interaction with specialized healthcare agents
-- **Smart Request Routing**: Automatic routing to appropriate specialized agents based on query type
+### 🤖 AI-Powered Multi-Agent System (CrewAI)
+- **CrewAI Framework**: Modular, orchestrated multi-agent system for healthcare, enabling robust agent definition, management, and coordination.
+- **Intelligent Chat Assistant**: Natural language interaction with CrewAI-powered specialized healthcare agents
+- **Smart Request Routing**: Automatic routing to appropriate CrewAI agents based on query type
 - **Real-time Responses**: Immediate AI-generated responses with medical accuracy and safety validation
 - **Context Awareness**: Maintains conversation history and user preferences across sessions
 
@@ -47,6 +48,7 @@ A comprehensive AI-powered healthcare assistant that helps users manage medicati
 ## 🏗️ Technology Stack
 
 ### Backend Infrastructure
+- **CrewAI Framework**: Core agent orchestration and modular agent management for all healthcare intelligence
 - **Framework**: FastAPI (Python 3.8+) with async/await patterns
 - **Database**: SQLite with SQLAlchemy ORM (PostgreSQL-ready for production)
 - **AI Integration**: Groq LLaMA models (llama-3.3-70b-versatile) for natural language processing
@@ -62,16 +64,17 @@ A comprehensive AI-powered healthcare assistant that helps users manage medicati
 - **Interactive Features**: Real-time chat, drag-and-drop uploads, modal dialogs, smooth animations
 
 ### AI & External Services
-- **Language Models**: Groq LLaMA integration with healthcare-specific prompts
+- **CrewAI Agent Orchestration**: Modular agent creation, management, and coordination for all healthcare tasks
+- **Language Models**: Groq LLaMA integration with healthcare-specific prompts, easily connected to CrewAI agents
 - **Drug Database**: NIH RxNorm API for real-time drug interaction checking
 - **OCR Processing**: Tesseract integration for medical document text extraction
 - **Email Delivery**: SMTP services for automated medication reminders
 - **Fallback Systems**: Local processing when external services are unavailable
 
 ### Architecture Pattern
-- **Multi-Agent System**: Specialized AI agents for different healthcare domains
-- **Intelligent Coordination**: Smart request routing and context management
-- **Modular Design**: Extensible architecture with independent agent scaling
+- **CrewAI Multi-Agent System**: All healthcare logic is implemented as CrewAI agents, each with a clear role, toolset, and LLM integration
+- **Intelligent Coordination**: CrewAI-powered smart request routing and context management
+- **Modular Design**: Extensible CrewAI architecture with independent agent scaling
 - **Real-time Processing**: Immediate safety validation and emergency detection
 - **Comprehensive Error Handling**: Graceful degradation and fallback mechanisms
 

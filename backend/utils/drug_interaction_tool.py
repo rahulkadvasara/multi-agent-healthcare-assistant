@@ -143,8 +143,8 @@ def multi_drug_interaction_checker(drug_rxcuis: str) -> str:
         # Check all pairs
         for i, rxcui1 in enumerate(rxcuis):
             for rxcui2 in rxcuis[i+1:]:
-                result = drug_interaction_checker(rxcui1, rxcui2)
-                if "⚠️ Interaction found" in result:
+                result = drug_interaction_checker.invoke(rxcui1, rxcui2)
+                if isinstance(result, str) and "⚠️ Interaction found" in result:
                     interactions_found.append(f"RxCUI {rxcui1} + RxCUI {rxcui2}: {result}")
         
         if interactions_found:
@@ -179,8 +179,8 @@ def check_all_drug_interactions(new_drugs: List[str], current_medications: List[
         # Step 1: Get RxCUIs for all drugs
         all_drugs = new_drugs + current_medications
         for drug in all_drugs:
-            rxcui = drug_rxcui_finder(drug)
-            if not rxcui.startswith('❌'):
+            rxcui = drug_rxcui_finder.invoke(drug)
+            if isinstance(rxcui, str) and not rxcui.startswith('❌'):
                 drug_rxcuis[drug] = rxcui
                 api_working = True
                 print(f"✅ Found RxCUI for {drug}: {rxcui}")
@@ -194,8 +194,8 @@ def check_all_drug_interactions(new_drugs: List[str], current_medications: List[
                 if new_drug in drug_rxcuis:
                     for current_drug in current_medications:
                         if current_drug in drug_rxcuis:
-                            result = drug_interaction_checker(drug_rxcuis[new_drug], drug_rxcuis[current_drug])
-                            if "⚠️ Interaction found" in result:
+                            result = drug_interaction_checker.invoke(drug_rxcuis[new_drug], drug_rxcuis[current_drug])
+                            if isinstance(result, str) and "⚠️ Interaction found" in result:
                                 interactions_found.append({
                                     'drug1': new_drug,
                                     'drug2': current_drug,
@@ -208,8 +208,8 @@ def check_all_drug_interactions(new_drugs: List[str], current_medications: List[
                 if drug1 in drug_rxcuis:
                     for drug2 in new_drugs[i+1:]:
                         if drug2 in drug_rxcuis:
-                            result = drug_interaction_checker(drug_rxcuis[drug1], drug_rxcuis[drug2])
-                            if "⚠️ Interaction found" in result:
+                            result = drug_interaction_checker.invoke(drug_rxcuis[drug1], drug_rxcuis[drug2])
+                            if isinstance(result, str) and "⚠️ Interaction found" in result:
                                 interactions_found.append({
                                     'drug1': drug1,
                                     'drug2': drug2,
@@ -229,6 +229,7 @@ def check_all_drug_interactions(new_drugs: List[str], current_medications: List[
         print(f"Error in comprehensive drug checking: {e}")
         # Fallback to local database only
         interactions_found = _check_local_interactions(new_drugs, current_medications)
+        print("Falling back to local database only.")
         return _format_interaction_response(new_drugs, current_medications, interactions_found, False)
 
 def _check_local_interactions(new_drugs: List[str], current_medications: List[str]) -> List[Dict]:

@@ -1,21 +1,21 @@
 # Healthcare Support System Architecture
 
 ## Overview
-The Healthcare Support System is a comprehensive AI-powered platform designed to assist users with medication management, health queries, and medical report analysis. The system employs a sophisticated multi-agent architecture with specialized AI agents, real-time drug interaction checking using RxNorm API, automated scheduling, and modern glass morphism UI design.
+The Healthcare Support System is a comprehensive AI-powered platform designed to assist users with medication management, health queries, and medical report analysis. The system is built on the CrewAI framework, which enables a sophisticated multi-agent architecture with modular, orchestrated agents. CrewAI provides robust agent definition, management, and coordination, powering specialized healthcare agents, real-time drug interaction checking using RxNorm API, automated scheduling, and modern glass morphism UI design.
 
 ## System Architecture
 
-### High-Level Architecture
+### High-Level Architecture (CrewAI-Powered)
 ```
-┌─────────────────────────┐    ┌─────────────────────────┐    ┌─────────────────────────┐
-│       Frontend          │    │        Backend          │    │     External            │
-│   (Modern Web App)      │◄──►│      (FastAPI)          │◄──►│     Services            │
-│ • Glass Morphism UI     │    │ • Multi-Agent System    │    │ • RxNorm API (NIH)      │
-│ • Real-time Chat        │    │ • Drug Interaction API  │    │ • Groq AI (LLaMA)       │
-│ • Interactive Reminders │    │ • OCR Processing        │    │ • SMTP Email Service    │
-│ • File Upload (OCR)     │    │ • Automated Scheduling  │    │ • Tesseract OCR         │
-│ • Responsive Design     │    │ • Session Management    │    │ • APScheduler           │
-└─────────────────────────┘    └─────────────────────────┘    └─────────────────────────┘
+┌────────────────────────────┐    ┌────────────────────────────┐    ┌────────────────────────────┐
+│       Frontend             │    │        Backend             │    │     External               │
+│   (Modern Web App)         │◄──►│  (FastAPI + CrewAI)        │◄──►│    Services                │
+│ • Glass Morphism UI        │    │ • CrewAI Multi-Agent System│    │ • RxNorm API (NIH)         │
+│ • Real-time Chat           │    │ • Drug Interaction API     │    │ • Groq AI (LLaMA)          │
+│ • Interactive Reminders    │    │ • OCR Processing           │    │ • SMTP Email Service       │
+│ • File Upload (OCR)        │    │ • Automated Scheduling     │    │ • Tesseract OCR            │
+│ • Responsive Design        │    │ • Session Management       │    │ • APScheduler              │
+└────────────────────────────┘    └────────────────────────────┘    └────────────────────────────┘
 ```
 
 ### Detailed System Architecture
@@ -130,30 +130,32 @@ The Healthcare Support System is a comprehensive AI-powered platform designed to
 - **User Authentication**: Secure login with session management
 - **Responsive Design**: Mobile-optimized interface
 
-### Backend Layer (FastAPI Multi-Agent System)
+### Backend Layer (FastAPI + CrewAI Multi-Agent System)
 - **Technology**: FastAPI (Python 3.8+) with async/await
-- **Architecture Pattern**: Multi-agent system with intelligent routing
+- **CrewAI Framework**: Core agent orchestration and modular agent management for all healthcare intelligence
+- **Architecture Pattern**: CrewAI-powered multi-agent system with intelligent routing
 - **Database**: SQLite with SQLAlchemy ORM
 
 #### Core Application (app.py):
 - **Authentication Endpoints**: `/register`, `/login`, `/logout`
-- **Chat Endpoints**: `/chat` with AI agent routing
+- **Chat Endpoints**: `/chat` with CrewAI agent routing
 - **Reminder Management**: `/add-reminder`, `/get-reminders`, `/delete-reminder`, `/force-add-reminder`
 - **File Processing**: `/upload-report` with OCR analysis
 - **Health Monitoring**: `/health`, `/test-email`
 - **CORS Support**: Cross-origin resource sharing enabled
 - **Error Handling**: Comprehensive exception handling
 
-#### Agent Coordination System (coordinator.py):
-- **Smart Routing**: NLP-based intent recognition
+#### Agent Coordination System (coordinator.py, CrewAI):
+- **CrewAI Orchestration**: Modular agent definition, management, and coordination
+- **Smart Routing**: NLP-based intent recognition using CrewAI's orchestration
 - **Context Management**: User session and conversation state
-- **Agent Selection**: Keyword-based routing to specialized agents
+- **Agent Selection**: CrewAI-powered routing to specialized agents
 - **Response Formatting**: Consistent output formatting
 - **Error Recovery**: Graceful fallbacks and error handling
 
-#### Specialized AI Agents:
+#### Specialized AI Agents (CrewAI-based):
 
-**1. Drug Interaction Agent (drug_interaction.py)**
+**1. Drug Interaction Agent (drug_interaction.py, CrewAI)**
 - **Purpose**: Comprehensive medication safety management
 - **Capabilities**:
   - Real-time RxNorm API integration for drug interaction checking
@@ -164,7 +166,7 @@ The Healthcare Support System is a comprehensive AI-powered platform designed to
 - **Integration**: Direct database access for user reminders
 - **Safety Features**: Multi-layer validation, force-add with warnings
 
-**2. Symptom Checker Agent (symptom_checker.py)**
+**2. Symptom Checker Agent (symptom_checker.py, CrewAI)**
 - **Purpose**: Intelligent symptom analysis with safety protocols
 - **Capabilities**:
   - Multi-symptom analysis with AI-powered interpretation
@@ -174,7 +176,7 @@ The Healthcare Support System is a comprehensive AI-powered platform designed to
   - Red flag detection for urgent medical attention
 - **AI Integration**: Groq LLaMA models for natural language processing
 
-**3. Healthcare Chatbot (chatbot.py)**
+**3. Healthcare Chatbot (chatbot.py, CrewAI)**
 - **Purpose**: General health education and wellness guidance
 - **Capabilities**:
   - Topic-specific responses (nutrition, exercise, mental health)
@@ -184,7 +186,7 @@ The Healthcare Support System is a comprehensive AI-powered platform designed to
   - Fallback responses for AI service unavailability
 - **Knowledge Areas**: Nutrition, exercise, mental health, prevention, chronic conditions
 
-**4. Medical Report Analyzer (report_analyzer.py)**
+**4. Medical Report Analyzer (report_analyzer.py, CrewAI)**
 - **Purpose**: Intelligent document analysis and interpretation
 - **Capabilities**:
   - OCR text processing and validation
